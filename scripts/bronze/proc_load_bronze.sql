@@ -84,7 +84,7 @@ BEGIN
 		TRUNCATE TABLE bronze.erp_loc_a101;
 		PRINT '>> Inserting Data Into: bronze.erp_loc_a101';
 		BULK INSERT bronze.erp_loc_a101
-		FROM 'C:\sql\dwh_project\datasets\source_erp\loc_a101.csv'
+		FROM 'Z:\loc_a101.csv'
 		WITH (
 			FIRSTROW = 2,
 			FIELDTERMINATOR = ',',
