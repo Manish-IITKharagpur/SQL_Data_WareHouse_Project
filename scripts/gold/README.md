@@ -34,15 +34,70 @@ The `dim_customer` table is the "Golden Record" of our customer base. It integra
 * **Full Join Integrity**: Utilized `LEFT JOIN` to ensure that every customer in our CRM is represented, even if supplementary ERP data is missing.
 
 ### 3. Data Dictionary
-| Column Name | Type | Description |
+| Column Name | Data Type | Description |
 | :--- | :--- | :--- |
-| `customer_key` | INT | Surrogate Key (Primary Key for Gold Layer) |
-| `customer_id` | INT | Original System ID from CRM |
-| `gender` | VARCHAR | Consolidated gender from CRM and ERP sources |
-| `country` | VARCHAR | Standardized country name for regional analysis |
+| **customer_key** | `INT` | **Surrogate Key**: A system-generated unique identifier used as the Primary Key for the Gold layer. Decouples the warehouse from source system changes. |
+| **customer_id** | `INT` | Unique numerical identifier assigned to each customer from the CRM system. |
+| **customer_number** | `NVARCHAR(50)`| Alphanumeric identifier representing the customer, used for cross-system tracking and integration. |
+| **first_name** | `NVARCHAR(50)`| The customer's first name, as recorded in the system. |
+| **last_name** | `NVARCHAR(50)`| The customer's last name or family name. |
+| **country** | `NVARCHAR(50)`| The standardized country of residence (e.g., 'Australia', 'Germany'). |
+| **marital_status** | `NVARCHAR(50)`| The current marital status of the customer (e.g., 'Married', 'Single'). |
+| **gender** | `NVARCHAR(50)`| The consolidated gender of the customer (e.g., 'Male', 'Female', 'n/a') using fallback logic. |
+| **birthdate** | `DATE` | The date of birth of the customer, formatted as YYYY-MM-DD. |
+| **create_date** | `DATE` | The date and time when the customer record was originally created in the system. |
 
 ---
 
-## 🚀 Upcoming Gold Objects
-* [ ] **dim_product**: Integrating product details and categories.
-* [ ] **fact_sales**: The central table for financial metrics and KPIs.
+---
+## 🗂️ Dimension Table: dim_products
+
+### 1. Business Logic
+The `dim_products` table provides a unified view of the company's product catalog. It enriches basic CRM product data with detailed category hierarchies from the ERP system.
+
+### 2. Key Transformations
+* **Hierarchical Integration**: Merged CRM product records with ERP category and subcategory data to enable multi-level reporting.
+* **SCD Support**: Included `start_date` and `end_date` to support historical analysis and Slowly Changing Dimensions (SCD).
+* **Surrogate Key**: Generated `product_key` to ensure each unique state of a product is uniquely identified.
+
+#### **Data Dictionary**
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| **product_key** | `INT` | **Surrogate Key**: Unique identifier used to uniquely identify each product record in the dimension table. |
+| **product_id** | `INT` | A unique identifier assigned to the product for internal tracking and referencing. |
+| **product_number** | `NVARCHAR(50)` | A structured alphanumeric code representing the product, often used for categorization or inventory. |
+| **product_name** | `NVARCHAR(50)` | Descriptive name of the product, including key details such as type, color, and size. |
+| **category_id** | `NVARCHAR(50)` | A unique identifier for the product's category, linking to its high-level classification. |
+| **category** | `NVARCHAR(50)` | The broader classification of the product (e.g., 'Bikes', 'Components') to group related items. |
+| **subcategory** | `NVARCHAR(50)` | A more detailed classification of the product within the category, such as product type. |
+| **maintenance_required**| `NVARCHAR(50)` | Indicates whether the product requires maintenance (e.g., 'Yes', 'No'). |
+| **cost** | `INT` | The cost or base price of the product, measured in monetary units. |
+| **product_line** | `NVARCHAR(50)` | The specific product line or series to which the product belongs (e.g., 'Road', 'Mountain'). |
+| **start_date** | `DATE` | The date when the product became available for sale or use. |
+---
+## 🗂️ Fact Table: facts_sales
+
+### 1. Business Logic
+The `facts_sales` table is the central hub of the analytical model. It records every sales transaction and links them to relevant business entities (Customers and Products).
+
+### 2. Key Transformations
+* **Key Mapping**: Replaced source system IDs with Gold-layer Surrogate Keys (`product_key`, `customer_key`) to ensure referential integrity.
+* **Schema Alignment**: Standardized all column names to business-friendly terms for easier reporting.
+* **Data Consolidation**: Brought together order dates, shipping dates, and financial metrics into a single, flat structure ready for aggregation.
+
+#### **Data Dictionary**
+
+| Column Name | Data Type | Description |
+| :--- | :--- | :--- |
+| **order_number** | `NVARCHAR(50)` | The unique identifier for each sales order, used for tracking individual transactions. |
+| **product_key** | `INT` | **Foreign Key**: Connects each sale to a specific record in `gold.dim_products` via its Surrogate Key. |
+| **customer_key** | `INT` | **Foreign Key**: Connects each sale to a specific record in `gold.dim_customers` via its Surrogate Key. |
+| **order_date** | `DATE` | The date the order was placed, used for time-series analysis and trend reporting. |
+| **ship_date** | `DATE` | The date the order was shipped from the warehouse to the customer. |
+| **due_date** | `DATE` | The date by which the order payment or delivery was expected. |
+| **sales_amount** | `INT`| The total monetary value of the line item (Quantity × Price). |
+| **quantity** | `INT` | The total number of units sold for this specific transaction. |
+| **price** | `INT`| The unit price of the product at the time of the transaction. |
+
+---
